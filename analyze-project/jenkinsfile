@@ -1,0 +1,287 @@
+#!groovy
+
+// 敏捷分析项目 - 前端两个项目打包 -> 后端下拉代码 -> 自动提交
+
+// 给 remote 定义变量
+def GetRemoteServer(name, host, credentialsId){
+    def remote = [:]
+    remote.name = name
+    remote.host = host
+    remote.port = 22
+    remote.timeoutSec = 300000
+    remote.allowAnyHosts = true
+    //通过withCredentials调用Jenkins凭据中已保存的凭据，credentialsId需要填写，其他保持默认即可
+    withCredentials([usernamePassword(credentialsId: credentialsId, passwordVariable: 'password', usernameVariable: 'userName')]) {
+        remote.user = "${userName}"
+        remote.password = "${password}"
+    }
+    return remote
+}
+
+pipeline {
+    agent any
+    //agent {label "slave-2"}
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        timeout(time: 25, unit:'MINUTES') // 25分钟超时
+    }
+
+    environment {
+        NODE_VERSION = 'NodeJS14'  // nodeJS版本-前端需要
+        project_env = 'default'
+    }
+
+    parameters{
+        gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'release-20220411', name: 'branch', type: 'PT_BRANCH', description: '请选择前端-新敏捷分析项目打包分支',useRepository: 'http://172.168.0.14:8181/gitlab/datacenter/analyze-platform.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+
+        gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'release-20220411', name: 'sec_branch', type: 'PT_BRANCH', description: '请选择前端-老敏捷分析项目打包分支',useRepository: 'http://20.223.0.4:8082/gitlab/DataCenter/youcash-bgs-analyze.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+
+        choice(name: 'project_env_second', choices: ['default', 'prod', 'pre'], description: '请选择老前端-老敏捷分析项目打包部署方式')
+
+        gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'production', name: 'thr_branch', type: 'PT_BRANCH', description: '请选择后端-敏捷分析项目打包分支',useRepository: 'http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-bdp-analysis.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+
+        booleanParam(name: 'needInstall', defaultValue: false, description: '是否需要重新 npm install')
+
+    }
+    stages {
+      // 前端项目1-构建 ----------------------------
+      stage('front-init') {
+        steps {
+          script {
+            echo "当前新前端敏捷分析项目部署：${project_env}"
+            sh "ls"
+            // sh "rm -rf ./*"
+            // echo "构建构建项目：${projects}"
+            dir('frontend') {
+              println "${branch}"
+              println "${params.branch}"
+              println "当前目录"
+              sh "ls"
+              git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://172.168.0.14:8181/gitlab/datacenter/analyze-platform.git", branch: "${branch}"
+            }
+          }
+        }
+      }
+      stage('front-install') {
+        tools {
+          nodejs "${NODE_VERSION}"
+        }
+        steps {
+          script {
+            sh "date"
+            dir('frontend') {
+              echo "node && npm --version"
+              sh "node --version;npm --version"
+              // sh "rm -rf ./node_modules"
+              if (!fileExists("./node_modules")) {
+                println "不存在node_modules目录,所以进行安装"
+                println "npm install"
+                sh "npm install"
+              } else if (needInstall == 'true') {
+                println needInstall
+                sh "npm install"
+              }
+            }
+          }
+        }
+      }
+      stage('front-build') {
+        tools {
+          nodejs "${NODE_VERSION}"
+        }
+        steps {
+          script {
+            dir('frontend') {
+              // 打包
+              if (project_env == 'default') {
+                println "执行构建  npm run build"
+                sh "npm run build"
+              } else {
+                println "执行构建 ${project_env}"
+                sh "npm run build:${project_env}"
+              } 
+              // 压缩打包内容
+              dir("dist/board") {
+                sh "tar -cvzf frontend-analyze.tar.gz *"
+              }
+            }
+            // 将打包文件移动出来
+            sh """
+              rm -rf frontend-analyze.tar.gz
+              mv  ./frontend/dist/board/frontend-analyze.tar.gz  ./
+            """
+          }
+        }
+      }
+      // 前端项目1-构建完成 ----------------------------
+
+      // 前端项目2-构建 ----------------------------
+      stage('sec-front-init') {
+        steps {
+          script {
+            echo "当前新前端老敏捷分析项目部署：${project_env_second}"
+            // echo "构建构建项目：${projects}"
+            dir('sec-frontend') {
+              println "${sec_branch}"
+              println "${params.sec_branch}"
+              println "当前目录"
+              sh "pwd"
+              git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://20.223.0.4:8082/gitlab/DataCenter/youcash-bgs-analyze.git", branch: sec_branch
+            }
+          }
+        }
+      }
+      stage('sec-front-install') {
+        tools {
+          nodejs "${NODE_VERSION}"
+        }
+        steps {
+          script {
+            sh "date"
+            dir('sec-frontend') {
+              echo "node && npm --version"
+              sh "node --version;npm --version"
+              // sh "rm -rf ./node_modules"
+              if (!fileExists("./node_modules")) {
+                println "不存在node_modules目录,所以进行安装"
+                println "npm install"
+                sh "npm install"
+              } else if (needInstall == 'true') {
+                println needInstall
+                sh "npm install"
+              }
+            }
+          }
+        }
+      }
+      stage('sec-front-build') {
+        tools {
+          nodejs "${NODE_VERSION}"
+        }
+        steps {
+          script {
+            dir('sec-frontend') {
+              // 打包
+              if (project_env_second == 'default') {
+                println "执行构建  npm run build"
+                sh "npm run build"
+              } else {
+                println "执行构建 ${project_env_second}"
+                sh "npm run build:${project_env_second}"
+              } 
+              // 压缩打包内容
+              dir("dist") {
+                sh "tar -cvzf sec-frontend-analyze.tar.gz *"
+              }
+            }
+            // 将打包文件移动出来
+            sh """
+              rm -rf sec-frontend-analyze.tar.gz
+              mv  ./sec-frontend/dist/sec-frontend-analyze.tar.gz  ./
+            """
+          }
+        }
+      }
+      // 前端项目2-构建完成 ----------------------------
+
+
+      // 打包代码复制到某台服务器
+      // stage('code-copy') {
+      //   steps {
+      //     script {
+      //       def remote = GetRemoteServer('11.113.1.50', '11.113.1.50', 'jeffy-liang-50')
+      //       // 创建服务器上某个目录存放代码压缩包
+      //       sshCommand remote: remote, command: """
+      //         if [ ! -d "/home/appuser/analyze-module" ];then
+      //           mkdir -p /home/appuser/analyze-module
+
+      //           rm -rf /home/appuser/analyze-module/*
+      //         fi
+      //       """
+      //       sshPut remote: remote, from: "./frontend-analyze.tar.gz", into: "/home/appuser/analyze-module/"
+
+      //       sshPut remote: remote, from: "./sec-frontend-analyze.tar.gz", into: "/home/appuser/analyze-module/"
+      //     }
+      //   }
+      // }
+      // 代码复制完成 ----------------------------
+
+      stage('backend-init') {
+        steps {
+          script {
+            echo "后端项目分支:${thr_branch}"
+            // echo "构建构建项目：${projects}"
+            dir('backend') {
+              sh "rm -rf ./*"
+              println "${params.thr_branch}"
+              println "当前目录"
+              sh "pwd"
+              git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-bdp-analysis.git", branch: thr_branch
+            }
+          }
+        }
+      }
+
+      stage('code-inner-copy') {
+        steps {
+          script {
+            // 进入这个目录
+            dir("backend/youcash-bdp-analysis-rest/src/main/resources/public") {
+              // 删除文件
+              sh "rm -rf ./analyze/*"
+              sh "rm -rf ./board/*"
+              sh "mkdir -p board"
+              sh "mkdir -p analyze"
+            }
+            // 移动项目1
+            sh """
+              mv  ./frontend-analyze.tar.gz  ./backend/youcash-bdp-analysis-rest/src/main/resources/public/board
+            """
+            // 移动项目2
+            sh """
+              mv  ./sec-frontend-analyze.tar.gz  ./backend/youcash-bdp-analysis-rest/src/main/resources/public/analyze
+            """
+            // 项目 -> 解压 -> 删除压缩包
+            dir('backend/youcash-bdp-analysis-rest/src/main/resources/public') {
+              dir("board") {
+                sh "tar -xvf frontend-analyze.tar.gz"
+                sh "rm -rf frontend-analyze.tar.gz"
+              }
+              dir("analyze") {
+                sh "tar -xvf sec-frontend-analyze.tar.gz"
+                sh "rm -rf sec-frontend-analyze.tar.gz"
+              }
+            }
+          }
+        }
+      }
+
+      stage('code-submit') {
+        steps {
+          script {
+            dir('backend') {
+              def _date = new Date()
+              try {
+                sh 'git branch'
+                sh 'git branch -D dev'
+              } catch (e) {
+                println "删除分支报错"
+              }
+              try {
+                sh 'git checkout -b dev'
+              } catch (e) {
+                 println "创建分支报错"
+              }
+              sh "git checkout dev"
+              sh "git config user.name bdp-jenkins"
+              sh "git config user.email bdp-jenkins@youcash.com"
+              sh "git add ./youcash-bdp-analysis-rest/src/main/resources/public"
+              sh "git commit -m 'Merge: 前端代码打包提交 日期:${_date}'"
+              println "推送分支:${thr_branch}"
+              sh "git push origin dev:${thr_branch}"
+            }
+          }
+        }
+      }
+    }
+}
