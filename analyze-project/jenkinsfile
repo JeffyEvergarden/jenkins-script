@@ -141,7 +141,9 @@ pipeline {
             dir('sec-frontend') {
               echo "node && npm --version"
               sh "node --version;npm --version"
-              sh "npm install -g cross-env"
+              // 云端缺包
+              // sh "npm install -g umi@3"
+              // sh "npm install -g cross-env"
               // sh "rm -rf ./node_modules"
               if (!fileExists("./node_modules")) {
                 println "不存在node_modules目录,所以进行安装"
