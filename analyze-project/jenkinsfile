@@ -141,6 +141,7 @@ pipeline {
             dir('sec-frontend') {
               echo "node && npm --version"
               sh "node --version;npm --version"
+              sh "npm install -g umi"
               // sh "rm -rf ./node_modules"
               if (!fileExists("./node_modules")) {
                 println "不存在node_modules目录,所以进行安装"
