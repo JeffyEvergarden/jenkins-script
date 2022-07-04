@@ -137,7 +137,6 @@ pipeline {
             }
             steps {
                 script {
-                    sh "rm -rf ./*"
                     dir('frontend') {
                         sh "date"
                         echo "node && npm --version"
