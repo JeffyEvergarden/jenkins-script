@@ -108,7 +108,7 @@ pipeline {
 
         choice(name: 'packageWay', choices: ['打包', '部署'],  description: '请选择前端是打包到后端项目还是进行部署')
 
-        gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'master', name: 'sec_branch', type: 'PT_BRANCH', description: '请选择后端-统一门户项目打包分支',useRepository: 'http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-unifyportal.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+        gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'production', name: 'sec_branch', type: 'PT_BRANCH', description: '请选择后端-敏捷分析项目打包分支',useRepository: 'http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-bdp-analysis.git', sortMode: 'DESCENDING_SMART', listSize: '20')
 
         booleanParam(name: 'needInstall', defaultValue: false, description: '是否需要重新 npm install')
     }
