@@ -88,7 +88,7 @@ pipeline {
     parameters{
         choice(name: 'projectEnv', choices: ['default'], description: '请选择前端打包环境 npm run build方式')
         gitParameter branchFilter: 'origin/(.*)', defaultValue: 'master', name: 'branch', type: 'PT_BRANCH',
-        description: '请选择统一门户项目打包分支',useRepository: 'http://172.168.0.14:8181/gitlab/datacenter/entry-platform.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+        description: ('请选择统一门户项目打包分支',useRepository: 'http://172.168.0.14:8181/gitlab/datacenter/entry-platform.git', sortMode: 'DESCENDING_SMART', listSize: '20')
     }
 
     stages {
