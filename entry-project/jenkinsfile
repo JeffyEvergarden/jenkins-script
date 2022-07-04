@@ -21,7 +21,6 @@ def GetRemoteServer(name, host, credentialsId){
 
 
 def generateStage(projectEnv) {
-    // return {
         stage("build") {
             // 远程服务器配置
             // 得到服务器定义对象
@@ -52,25 +51,41 @@ def generateStage(projectEnv) {
                 
             println "发布"
             // linux 脚本
-            
-            println "操作地址: ${remote.host} /usr/local/frontend/"
-            sshCommand remote: remote, command: """
-                if [ ! -d "/home/appuser/cooperation-${projectEnv}" ];then
-                    mkdir -p /home/appuser/cooperation-${projectEnv}
-                fi
+            if (packageWay == '部署') {
+
+                println "操作地址: ${remote.host} /usr/local/frontend/"
+                sshCommand remote: remote, command: """
+                    if [ ! -d "/home/appuser/cooperation-${projectEnv}" ];then
+                        mkdir -p /home/appuser/cooperation-${projectEnv}
+                    fi
+                    """
+                sshPut remote: remote, from: "./entry-${projectEnv}.tar.gz", into: "/home/appuser/cooperation-${projectEnv}/"
+                sshCommand remote: remote, command: """
+                    cd /home/appuser/cooperation-${projectEnv}
+                    tar -xvf entry-${projectEnv}.tar.gz
+                    rm -rf entry-${projectEnv}.tar.gz
+                    rm -rf  /usr/local/frontend/*
+                    mkdir -p /usr/local/frontend/entry-platform
+                    mv ./*  /usr/local/frontend/entry-platform
+                    """
+            } else {
+                // 删除文件
+                dir("backend/youcash-bdp-unifyportal-web/src/main/resources/static") {
+                    // 删除文件
+                    sh "rm -rf ./*"
+                }
+                // 代码拷贝
+                sh """
+                  mv  ./entry-${projectEnv}.tar.gz  ./backend/youcash-bdp-unifyportal-web/src/main/resources/static
                 """
-            sshPut remote: remote, from: "./entry-${projectEnv}.tar.gz", into: "/home/appuser/cooperation-${projectEnv}/"
-            sshCommand remote: remote, command: """
-                cd /home/appuser/cooperation-${projectEnv}
-                tar -xvf entry-${projectEnv}.tar.gz
-                rm -rf entry-${projectEnv}.tar.gz
-                rm -rf  /usr/local/frontend/*
-                mkdir -p /usr/local/frontend/entry-platform
-                mv ./*  /usr/local/frontend/entry-platform
-                """
-            
+
+                dir('backend/youcash-bdp-unifyportal-web/src/main/resources/static') {
+                    sh "tar -xvf entry-${projectEnv}.tar.gz"
+                    sh "rm -rf entry-${projectEnv}.tar.gz"
+                }
+
+            }
         }
-    // }
 }
 
 pipeline {
@@ -87,8 +102,15 @@ pipeline {
 
     parameters{
         choice(name: 'projectEnv', choices: ['default'], description: '请选择前端打包环境 npm run build方式')
+
         gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'master', name: 'branch', type: 'PT_BRANCH',
         description: '请选择统一门户项目打包分支',useRepository: 'http://172.168.0.14:8181/gitlab/datacenter/entry-platform.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+
+        choice(name: 'packageWay', choices: ['打包', '部署'], defaultValue: '打包', description: '请选择前端是打包到后端项目还是进行部署')
+
+        gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'production', name: 'sec_branch', type: 'PT_BRANCH', description: '请选择后端-敏捷分析项目打包分支',useRepository: 'http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-unifyportal.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+
+        booleanParam(name: 'needInstall', defaultValue: false, description: '是否需要重新 npm install')
     }
 
     stages {
@@ -104,6 +126,7 @@ pipeline {
                 }
             }
         }
+
         // npm install
         stage('install') {
             tools {
@@ -127,13 +150,56 @@ pipeline {
                 }
             }
         }
+        // 后端代码下拉
+        stage('backend-init') {
+            steps {
+                script {
+                    echo "后端项目分支:${sec_branch}"
+                    dir('backend') {
+                        sh "rm -rf ./*"
+                        println "${params.src_branch}"
+                        println "当前目录"
+                        sh "pwd"
+                        git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-unifyportal.git", branch: sec_branch
+                    }
+                }
+            }
+        }
 
         stage('build') {
             steps {
                 script {
-                    generateStage(projectEnv)
+                    generateStage(projectEnv, packageWay)
                     echo "After build"
                     sh "date"
+                }
+            }
+        }
+
+        stage('code-commit') {
+            steps {
+                script {
+                    dir('backend') {
+                    def _date = new Date()
+                    try {
+                        sh 'git branch'
+                        sh 'git branch -D dev'
+                    } catch (e) {
+                        println "删除分支报错"
+                    }
+                    try {
+                        sh 'git checkout -b dev'
+                    } catch (e) {
+                        println "创建分支报错"
+                    }
+                    sh "git checkout dev"
+                    sh "git config user.name bdp-jenkins"
+                    sh "git config user.email bdp-jenkins@youcash.com"
+                    sh "git add ./youcash-bdp-unifyportal-web/src/main/resources/static"
+                    sh "git commit -m 'Merge: 统一门户前端代码打包提交 日期:${_date}'"
+                    println "推送分支:${thr_branch}"
+                    sh "git push origin dev:${thr_branch}"
+                    }
                 }
             }
         }
