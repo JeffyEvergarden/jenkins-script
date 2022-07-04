@@ -20,7 +20,7 @@ def GetRemoteServer(name, host, credentialsId){
 
 
 
-def generateStage(projectEnv) {
+def generateStage(projectEnv, packageWay) {
         stage("build") {
             // 远程服务器配置
             // 得到服务器定义对象
@@ -141,16 +141,14 @@ pipeline {
                         sh "date"
                         echo "node && npm --version"
                         sh "node --version;npm --version"
-                        // sh "rm -rf ./node_modules"
-                        sh """
-                            if [ ! -d "./node_modules" ];then
-                            echo 'has node_modules dir'
-                            else 
-                            echo 'not has node_modules dir'
-                            fi
-                        """
-                        echo "npm install"
-                        sh "npm install"
+                        if (!fileExists("./node_modules")) {
+                            println "不存在node_modules目录,所以进行安装"
+                            println "npm install"
+                            sh "npm install"
+                        } else if (needInstall == 'true') {
+                            println needInstall
+                            sh "npm install"
+                        }
                     }
                 }
             }
