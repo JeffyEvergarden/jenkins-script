@@ -200,8 +200,8 @@ pipeline {
                     sh "git config user.email bdp-jenkins@youcash.com"
                     sh "git add ./youcash-bdp-unifyportal-web/src/main/resources/static"
                     sh "git commit -m 'Merge: 统一门户前端代码打包提交 日期:${_date}'"
-                    println "推送分支:${thr_branch}"
-                    sh "git push origin dev:${thr_branch}"
+                    println "推送分支:${sec_branch}"
+                    sh "git push origin dev:${sec_branch}"
                     }
                 }
             }
