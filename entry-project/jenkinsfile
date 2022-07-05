@@ -71,16 +71,16 @@ def generateStage(projectEnv, packageWay) {
                     """
             } else {
                 // 删除文件
-                dir("backend/youcash-bdp-unifyportal-web/src/main/resources/static") {
+                dir("backend/youcash-unifyportal-web/src/main/resources/static") {
                     // 删除文件
                     sh "rm -rf ./*"
                 }
                 // 代码拷贝
                 sh """
-                  mv  ./entry-${projectEnv}.tar.gz  ./backend/youcash-bdp-unifyportal-web/src/main/resources/static
+                  mv  ./entry-${projectEnv}.tar.gz  ./backend/youcash-unifyportal-web/src/main/resources/static
                 """
 
-                dir('backend/youcash-bdp-unifyportal-web/src/main/resources/static') {
+                dir('backend/youcash-unifyportal-web/src/main/resources/static') {
                     sh "tar -xvf entry-${projectEnv}.tar.gz"
                     sh "rm -rf entry-${projectEnv}.tar.gz"
                 }
@@ -198,7 +198,7 @@ pipeline {
                     sh "git checkout dev"
                     sh "git config user.name bdp-jenkins"
                     sh "git config user.email bdp-jenkins@youcash.com"
-                    sh "git add ./youcash-bdp-unifyportal-web/src/main/resources/static"
+                    sh "git add ./youcash-unifyportal-web/src/main/resources/static"
                     sh "git commit -m 'Merge: 统一门户前端代码打包提交 日期:${_date}'"
                     println "推送分支:${sec_branch}"
                     sh "git push origin dev:${sec_branch}"
