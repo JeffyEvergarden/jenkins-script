@@ -79,6 +79,7 @@ pipeline {
                 println "npm install"
                 sh "npm install"
               } else if (needInstall) {
+                sh "rm -rf ./node_modules"
                 sh "npm install"
               }
             }
