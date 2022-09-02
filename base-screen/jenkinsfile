@@ -32,9 +32,11 @@ pipeline {
     }
 
     parameters{
-        gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'branch', type: 'PT_BRANCH', description: '请选择前端-基础业务量大屏项目打包分支',useRepository: 'http://172.168.0.14:8181/gitlab/datacenter/base-screen.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+        // gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'branch', type: 'PT_BRANCH', description: '请选择前端-基础业务量大屏项目打包分支',useRepository: 'http://172.168.0.14:8181/gitlab/datacenter/base-screen.git', sortMode: 'DESCENDING_SMART', listSize: '20')
 
         // gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'sec_branch', type: 'PT_BRANCH', description: '请选择后端-基础业务量大屏项目打包分支',useRepository: 'http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/bdp-screen-2021.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+
+        string(name: 'branch', defaultValue: 'dev',description: '请输入 前端-基础业务量大屏项目打包分支 http://172.168.0.14:8181/gitlab/datacenter/base-screen.git 分支名')
 
         string(name: 'sec_branch', defaultValue: 'dev',description: '请输入 后端代码仓库 http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/bdp-screen-2021.git 分支名')
 
