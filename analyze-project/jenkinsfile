@@ -38,7 +38,7 @@ pipeline {
 
         choice(name: 'project_env_second', choices: ['prod', 'pre', 'cdp'], description: '请选择老前端-老敏捷分析项目打包部署方式')
 
-        gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'production', name: 'thr_branch', type: 'PT_BRANCH', description: '请选择后端-敏捷分析项目打包分支',useRepository: 'http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-bdp-analysis.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+        gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'production', name: 'thr_branch', type: 'PT_BRANCH', description: '请选择后端-敏捷分析项目打包分支',useRepository: 'http://liangjianhui:asd123456@20.223.0.4:8082/gitlab/DataCenter/youcash-bdp-analysis.git', sortMode: 'DESCENDING_SMART', listSize: '20')
 
         booleanParam(name: 'needInstall', defaultValue: false, description: '是否需要重新 npm install')
 
