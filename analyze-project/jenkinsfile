@@ -219,7 +219,7 @@ pipeline {
               println "${params.thr_branch}"
               println "当前目录"
               sh "pwd"
-              git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-bdp-analysis.git", branch: thr_branch
+              git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://20.223.0.4:8082/gitlab/DataCenter/youcash-bdp-analysis.git", branch: thr_branch
             }
           }
         }
