@@ -1,0 +1,188 @@
+#!groovy
+
+// 用到的插件：NodeJS、pipeline、checkbox、git、SCM、SSH、pipeline-steps
+
+// 给 remote 定义变量
+def GetRemoteServer(name, host, credentialsId){
+    def remote = [:]
+    remote.name = name
+    remote.host = host
+    remote.port = 22
+    remote.timeoutSec = 300000
+    remote.allowAnyHosts = true
+    //通过withCredentials调用Jenkins凭据中已保存的凭据，credentialsId需要填写，其他保持默认即可
+    withCredentials([usernamePassword(credentialsId: credentialsId, passwordVariable: 'password', usernameVariable: 'userName')]) {
+        remote.user = "${userName}"
+        remote.password = "${password}"
+    }
+    return remote
+}
+
+pipeline {
+    agent any
+    //agent {label "slave-2"}
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        timeout(time: 25, unit:'MINUTES') // 25分钟超时
+    }
+
+    environment {
+        NODE_VERSION = 'NodeJS14'  // nodeJS版本-前端需要
+        project_env = 'default'
+    }
+
+    parameters{
+        // gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'branch', type: 'PT_BRANCH', description: '请选择前端-基础业务量大屏项目打包分支',useRepository: 'http://172.168.0.14:8181/gitlab/datacenter/base-screen.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+
+        // gitParameter (branchFilter: 'origin/(.*)', defaultValue: 'dev', name: 'sec_branch', type: 'PT_BRANCH', description: '请选择后端-基础业务量大屏项目打包分支',useRepository: 'http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/dp-screen-2021.git', sortMode: 'DESCENDING_SMART', listSize: '20')
+
+        string(name: 'branch', defaultValue: 'dev',description: '请输入 前端-饭堂大屏项目打包分支 仓库地址: http://172.168.0.14:8181/gitlab/datacenter/performance-screen.git 分支名')
+
+        string(name: 'sec_branch', defaultValue: 'dev',description: '请输入 后端-饭堂大屏打包分支仓库地址: http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/canteen-screen.git 分支名')
+
+        booleanParam(name: 'needInstall', defaultValue: false, description: '是否需要重新 npm install')
+
+
+    }
+    stages {
+      // 前端项目1-构建 ----------------------------
+      stage('front-init') {
+        steps {
+          script {
+            echo "当前新前端敏捷分析项目部署：http://172.168.0.14:8181/gitlab/datacenter/base-screen.git"
+            sh "ls"
+            // sh "rm -rf ./*"
+            // echo "构建构建项目：${projects}"
+            dir('frontend') {
+              println "${branch}"
+              println "${params.branch}"
+              println "当前目录"
+              sh "ls"
+              git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://172.168.0.14:8181/gitlab/datacenter/performance-screen.git", branch: "${branch}"
+            }
+          }
+        }
+      }
+      stage('front-install') {
+        tools {
+          nodejs "${NODE_VERSION}"
+        }
+        steps {
+          script {
+            sh "date"
+            dir('frontend') {
+              echo "node && npm --version"
+              sh "node --version;npm --version"
+              // sh "rm -rf ./node_modules"
+              if (!fileExists("./node_modules")) {
+                println "不存在node_modules目录,所以进行安装"
+                println "npm install"
+                sh "npm install"
+              } else if (needInstall) {
+                sh "npm install"
+              }
+            }
+          }
+        }
+      }
+      stage('front-build') {
+        tools {
+          nodejs "${NODE_VERSION}"
+        }
+        steps {
+          script {
+            dir('frontend') {
+              // 打包
+              println "执行构建  npm run build"
+              sh "npm run build"
+              // 压缩打包内容
+              dir("dist") {
+                sh "tar -cvzf frontend-screen.tar.gz *"
+              }
+            }
+            // 将打包文件移动出来
+            sh """
+              rm -rf frontend-screen.tar.gz
+              mv  ./frontend/dist/frontend-screen.tar.gz  ./
+            """
+          }
+        }
+      }
+      // 前端项目-构建完成 ----------------------------
+
+
+      stage('backend-init') {
+        steps {
+          script {
+            echo "后端项目分支:${sec_branch}"
+            // echo "构建构建项目：${projects}"
+            dir('backend') {
+              sh "rm -rf ./*"
+              println "${params.sec_branch}"
+              println "当前目录"
+              sh "pwd"
+              git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/canteen-screen.git", branch: sec_branch
+            }
+          }
+        }
+      }
+
+      stage('code-inner-copy') {
+        steps {
+          script {
+            sh """
+              if [ ! -d "./backend/src/main/resources/static" ];then
+                mkdir -p /backend/src/main/resources/static
+              fi
+            """
+            
+            // 进入这个目录
+            dir("backend/src/main/resources/static") {
+              // 删除文件
+              sh "rm -rf ./*"
+            }
+            // 移动项目
+            sh """
+              mv  ./frontend-screen.tar.gz  ./backend/src/main/resources/static
+            """
+
+            // 项目 -> 解压 -> 删除压缩包
+            dir('backend/src/main/resources/static') {
+              
+              sh "tar -xvf frontend-screen.tar.gz"
+              sh "rm -rf frontend-screen.tar.gz"
+              
+            }
+          }
+        }
+      }
+
+      stage('code-submit') {
+        steps {
+          script {
+            dir('backend') {
+              def _date = new Date()
+              try {
+                sh 'git branch'
+                sh 'git branch -D dev'
+              } catch (e) {
+                println "删除分支报错"
+              }
+              try {
+                sh 'git checkout -b dev'
+              } catch (e) {
+                 println "创建分支报错"
+              }
+              sh "git checkout dev"
+              sh "git config user.name bdp-jenkins"
+              sh "git config user.email bdp-jenkins@youcash.com"
+              sh "git add ./src/main/resources/static"
+              sh "git commit -m 'Merge: 前端代码打包提交 日期:${_date}'"
+              println "推送分支:${sec_branch}"
+              sh "git push origin dev:${sec_branch}"
+            }
+          }
+        }
+      }
+    }
+}
