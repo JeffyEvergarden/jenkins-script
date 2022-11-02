@@ -132,7 +132,7 @@ pipeline {
           script {
             sh """
               if [ ! -d "./backend/src/main/resources/static" ];then
-                mkdir -p /backend/src/main/resources/static
+                mkdir -p ./backend/src/main/resources/static
               fi
             """
             
