@@ -79,6 +79,9 @@ pipeline {
                 println "npm install"
                 sh "npm install"
               } else if (needInstall) {
+                sh "rm -rf ./node_modules"
+                sh "rm -rf ./src/.umi"
+                sh "rm -rf ./src/.umi-production"
                 sh "npm install"
               }
             }
