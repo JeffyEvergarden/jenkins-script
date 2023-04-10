@@ -130,7 +130,7 @@ pipeline {
         steps {
           script {
             // 进入这个目录
-            dir("backend/ai-teach/ai-teach-admin/src/main/resources") {
+            dir("backend/ai-teach-admin/src/main/resources") {
 
               if (!fileExists("./static")) {
                 sh "mkdir -p static"
@@ -152,11 +152,11 @@ pipeline {
 
             // 移动项目
             sh """
-              mv  ./frontend-project.tar.gz  ./backend/ai-teach/ai-teach-admin/src/main/resources/static
+              mv  ./frontend-project.tar.gz  ./backend/ai-teach-admin/src/main/resources/static
             """
 
             // 项目 -> 解压 -> 删除压缩包
-            dir('backend/ai-teach/ai-teach-admin/src/main/resources/static') {
+            dir('backend/ai-teach-admin/src/main/resources/static') {
               sh "tar -xvf frontend-project.tar.gz"
               sh "rm -rf frontend-project.tar.gz"
             }
@@ -183,7 +183,7 @@ pipeline {
               sh "git checkout dev"
               sh "git config user.name bdp-jenkins"
               sh "git config user.email bdp-jenkins@youcash.com"
-              sh "git add ./ai-teach/ai-teach-admin/src/main/resources/static"
+              sh "git add ./ai-teach-admin/src/main/resources/static"
               sh "git commit -m 'Merge: 前端代码打包提交 日期:${_date}'"
               println "推送分支:${sec_branch}"
               sh "git push origin dev:${sec_branch}"
