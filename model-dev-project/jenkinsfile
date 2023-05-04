@@ -34,7 +34,7 @@ pipeline {
     parameters{
         string(name: 'branch', defaultValue: 'dev',description: '请输入 前端-模型开发平台 项目打包分支 http://172.168.0.14:8181/gitlab/datacenter/model-dev-platform.git 分支名')
 
-        string(name: 'sec_branch', defaultValue: 'dev',description: '请输入 后端-模型开发平台 后端代码仓库打包分支 http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/bdp-model-lifecycle.git 分支名')
+        string(name: 'sec_branch', defaultValue: 'dev',description: '请输入 后端-模型开发平台 后端代码仓库打包分支 http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-model-dev.git 分支名')
 
         booleanParam(name: 'needInstall', defaultValue: false, description: '是否需要重新 npm install')
 
@@ -120,7 +120,7 @@ pipeline {
               println "${params.sec_branch}"
               println "当前目录"
               sh "pwd"
-              git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/bdp-model-lifecycle.git", branch: sec_branch
+              git credentialsId: '2f90cfac-bd3c-4e60-8770-407fe57d4310', url: "http://bdp-jenkins@20.223.0.4:8082/gitlab/DataCenter/youcash-model-dev.git", branch: sec_branch
             }
           }
         }
