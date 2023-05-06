@@ -85,7 +85,7 @@ pipeline {
             // 进入这个目录
             dir("backend/") {
 
-              if (!fileExists("./youcash-oneservice-front")) {
+              if (fileExists("./youcash-oneservice-front")) {
                 // sh "mkdir -p static"
                 sh "rm -rf ./youcash-oneservice-front/*"
               }
